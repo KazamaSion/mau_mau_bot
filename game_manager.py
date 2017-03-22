@@ -19,6 +19,7 @@
 
 
 import logging
+import random
 
 from game import Game
 from player import Player
@@ -77,7 +78,8 @@ class GameManager(object):
         # Don not re-add a player and remove the player from previous games in
         # this chat, if he is in one of them
         for player in players:
-            if player in game.players:
+            # Try to pervent someone win or leave then join again.
+            if player in game.players or user.id in game.joined_before: 
                 raise AlreadyJoinedError()
         else:
             try:
@@ -93,9 +95,29 @@ class GameManager(object):
                 players = self.userid_players[user.id]
 
         player = Player(game, user)
-
-        players.append(player)
+        
+        # Randomize player position.
+        game.joined_before.append(user.id)
+        slot = None
+        if len(players) > 2:
+          slot = random.randrange(len(players))
+          players.insert(slot, player)
+        else:
+          players.append(player)
+                       
         self.userid_current[user.id] = player
+        
+        def insert_player_beside_him(player_username, him_username, players_table, before_or_after):
+          if user.username == player_username:
+            for i, ingame_player in enumerate(players):
+              if ingame_player.user.username == him_username:
+                players_table.remove(player)
+                players_table.insert(i + (1 if before_or_after else 0), player)
+                break
+        insert_player_beside_him("baolan", "KazamaSion", players, True)
+        insert_player_beside_him("KazamaSion", "baolan", players, False)
+          
+            
 
     def leave_game(self, user, chat):
         """ Remove a player from its current game """
